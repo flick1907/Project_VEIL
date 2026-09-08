@@ -53,6 +53,13 @@ Priority definitions: **Must** is necessary for the SIH prototype; **Should** ma
 - **Priority:** Should
 - **Acceptance criteria:** Each action contains an allowed type, target descriptor, expected page context, and optional confirmation requirement; unparseable or unsupported actions are rejected locally.
 
+### FR-008 — Dynamic page-state observation
+
+- **Requirement:** Refresh local task and privacy observations when the authorized page changes materially during an active assistance session.
+- **Source:** Proposed
+- **Priority:** Should
+- **Acceptance criteria:** Controlled SPA/AJAX fixtures show that a material relevant change invalidates stale sanitized context and actions; observation work is scoped, debounced, and cleaned up when the session ends.
+
 ## Non-functional requirements
 
 ### NFR-001 — Visual-context accuracy
@@ -97,6 +104,13 @@ Priority definitions: **Must** is necessary for the SIH prototype; **Should** ma
 - **Priority:** Should
 - **Acceptance criteria:** Architecture documents cloud use as allowed during SIH and retain local/offline deployability as a decision to evaluate, not an asserted requirement.
 
+### NFR-007 — Bounded client operation
+
+- **Requirement:** Bound capture, perception, observation, and request work to the active assistance session and recover safely from browser worker/page lifecycle interruption.
+- **Source:** Proposed
+- **Priority:** Should
+- **Acceptance criteria:** The prototype defines timeouts and cancellation for each stage, releases observers and ephemeral data on session end, and treats interrupted work as requiring a new locally sanitized request rather than resuming with stale raw state.
+
 ## Privacy and security requirements
 
 ### PRIV-001 — Pre-transmission privacy enforcement
@@ -120,6 +134,13 @@ Priority definitions: **Must** is necessary for the SIH prototype; **Should** ma
 - **Priority:** Must
 - **Acceptance criteria:** Configured low-confidence or conflicting detections trigger conservative masking, context reduction, user intervention, or request cancellation; the selected policy is documented and tested.
 
+### PRIV-004 — Strict egress serialization
+
+- **Requirement:** Construct every visual-context request from an allowlisted sanitized schema that strips unrecognized fields before transport.
+- **Source:** Proposed
+- **Priority:** Must
+- **Acceptance criteria:** The transport accepts only a freshly serialized, schema-valid sanitized payload; unknown keys, raw capture references, raw OCR text, input values, and prohibited data types are rejected or omitted. Negative tests show malformed or overbroad objects cannot reach the server.
+
 ### SEC-001 — Least-privilege browser access
 
 - **Requirement:** Request only the browser permissions required by the selected demo workflow.
@@ -141,6 +162,27 @@ Priority definitions: **Must** is necessary for the SIH prototype; **Should** ma
 - **Priority:** Should
 - **Acceptance criteria:** The user can pause/cancel assistance; every proposed action has a local audit event with outcome and reason, without persisting raw sensitive screen content.
 
+### SEC-004 — Extension boundary hardening
+
+- **Requirement:** Treat webpages and content-script messages as untrusted, and validate all data crossing extension execution contexts.
+- **Source:** Proposed
+- **Priority:** Should
+- **Acceptance criteria:** Privileged extension components accept only typed, schema-valid messages from the active authorized tab/session; message senders, origin/tab/session binding, and action payloads are verified before use.
+
+### SEC-005 — Indirect prompt-injection resistance
+
+- **Requirement:** Ensure server reasoning treats webpage-derived content as untrusted data, not instructions or authority to expand actions.
+- **Source:** Proposed
+- **Priority:** Must
+- **Acceptance criteria:** The reasoning contract separates task instruction from webpage content, and local action validation remains authoritative even if a response proposes an unsafe action. A fixture containing adversarial webpage text results in rejection or safe guidance.
+
+### SEC-006 — High-impact action confirmation
+
+- **Requirement:** Require explicit user confirmation immediately before any action with an external, destructive, financial, account, permission, download, submission, or text-entry effect.
+- **Source:** Proposed
+- **Priority:** Must
+- **Acceptance criteria:** Such actions cannot execute from a server response alone; the confirmation identifies the intended target/effect and a rejected or expired confirmation results in no action.
+
 ## ML requirements
 
 ### ML-001 — Local perception scope
@@ -156,6 +198,13 @@ Priority definitions: **Must** is necessary for the SIH prototype; **Should** ma
 - **Source:** Proposed
 - **Priority:** Should
 - **Acceptance criteria:** Password inputs and configured semantic sensitive fields are redacted through deterministic local rules; visual detection complements rather than replaces them.
+
+### ML-004 — Targeted visual fallback
+
+- **Requirement:** Make deterministic DOM inspection the normal fast path and invoke local visual perception for the selected task and for cases where DOM evidence is absent, conflicting, or visually incomplete.
+- **Source:** Interpretation
+- **Priority:** Must
+- **Acceptance criteria:** The design documents explicit, testable visual-fallback triggers and demonstrates at least one visual-only or DOM-unreliable fixture. Trigger thresholds remain [REQUIRES BENCHMARK].
 
 ### ML-003 — Model/runtime selection by evidence
 

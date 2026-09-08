@@ -68,14 +68,14 @@ flowchart LR
 
 ### Recommended architecture
 
-[PROPOSED] Use the hybrid approach. It is justified because the official requirement combines visual perception with dynamic sensitive-data detection, while neither DOM-only nor vision-only covers both reliable explicit field detection and arbitrary rendered visual content. Hybrid design is not an invitation to process everything: DOM signals should avoid expensive visual work where they are sufficient, while visual perception handles the documented gaps. Whether it meets browser resource and latency constraints remains [REQUIRES BENCHMARK].
+[PROPOSED] Use a **DOM-first hybrid with targeted visual fallback**. It is justified because the official requirement combines visual perception with dynamic sensitive-data detection, while neither DOM-only nor vision-only covers both reliable explicit field detection and arbitrary rendered visual content. DOM is the normal fast path. Local vision is invoked for the selected task and when DOM evidence is absent, conflicting, or visually incomplete—for example, visible faces, canvas/image text, custom controls, or rendered layout ambiguity. This avoids treating vision as the default for every page while retaining the local visual demonstration required by SIH. Exact fallback triggers and their performance remain [REQUIRES BENCHMARK].
 
 ## 3. Browser/client architecture
 
 [PROPOSED] The extension has separable modules with narrow data privileges:
 
 - Session controller: user start/pause/cancel state and explicit consent surface.
-- Page observer: gathers permitted DOM-derived signals and coordinates capture of the current visible viewport.
+- Page observer: gathers permitted DOM-derived signals, watches material authorized-page changes, and coordinates capture of the current visible viewport.
 - Local perception adapter: runs the selected lightweight visual process only in-browser.
 - Sensitive-data policy engine: combines deterministic and visual candidate regions with source/confidence provenance.
 - Redaction renderer: applies irreversible blackout, blur, or masking to an ephemeral local representation.
@@ -84,7 +84,9 @@ flowchart LR
 - Action validator/executor: interprets structured server proposals, validates them against live state, and performs permitted actions.
 - Local audit log: stores minimal event metadata, never raw captures or raw sensitive values.
 
-[TBD] Manifest version, extension API details, cross-origin frame policy, storage mechanism, exact capture API, and model runtime are implementation decisions for later research.
+[PROPOSED] Privileged extension components and page-facing components communicate through typed, validated messages bound to the active tab, origin, and assistance session. Webpage objects, DOM text, and content-script messages are untrusted input; they must not be used as privileged instructions or directly passed to transport.
+
+[TBD] Manifest version, extension API details, cross-origin frame policy, storage mechanism, exact capture API, and model runtime are implementation decisions for later research. The browser is not treated as a universally trusted runtime: this design mitigates hostile webpage/script influence, but does not claim to protect against a compromised user device or browser process.
 
 ## 4. DOM observation
 
@@ -92,21 +94,25 @@ flowchart LR
 
 [PROPOSED] DOM signals can mark known sensitive fields before visual processing. They cannot establish that all rendered sensitive content is covered, so they are not the sole privacy control.
 
+[PROPOSED] During an active session, a scoped, debounced page-change observer detects material DOM/state changes and invalidates affected context/action proposals. It must disconnect on session end. Open-shadow-root traversal may be evaluated as a local signal; closed shadow roots, cross-origin frames, and canvas-only controls remain visual-fallback or unsupported cases rather than reasons to collect broader DOM data.
+
 ## 5. Screenshot / screen observation
 
 [CONFIRMED] The client must interpret the current screen locally through lightweight vision processing.
 
-[PROPOSED] Capture only the visible task-relevant viewport after user activation, at the lowest resolution that preserves the selected task. Treat every raw capture as sensitive local ephemeral data: do not persist it, include it in logs, or hand it to transport. Convert all detection coordinates to a documented viewport-pixel coordinate system.
+[PROPOSED] Capture only the active, user-authorized tab's visible task-relevant viewport after user activation, at the lowest resolution that preserves the selected task. Treat every raw capture as sensitive local ephemeral data: do not persist it, include it in logs, or hand it to transport. Convert all detection coordinates to a documented viewport-pixel coordinate system that records browser zoom/device scale for later target revalidation.
 
-[REQUIRES BENCHMARK] Capture rate, resolution, regional cropping, and whether a full viewport is necessary. The choice must optimize visual-context accuracy against client resource usage and latency.
+[REQUIRES BENCHMARK] Capture rate, resolution, regional clipping, and whether a full viewport is necessary. The choice must optimize visual-context accuracy against client resource usage and latency; selective capture is not assumed to be correct before its privacy coverage and task accuracy are measured.
 
 ## 6. Local visual perception and sensitive-data detection
 
 [CONFIRMED] Local lightweight vision processing and dynamic sensitive-data redaction are required; face blur, password blackout, and PII masking are stated examples.
 
-[PROPOSED] Detection runs locally and returns candidate regions, category, confidence, and source—not extracted raw sensitive content. Candidates may come from DOM rules, face detection, visual text/OCR plus local PII matching, or task-structure perception. The policy engine maps all candidates into a common coordinate system and normally redacts the union of sensitive regions.
+[PROPOSED] Detection runs locally and returns candidate regions, category, confidence, and source—not extracted raw sensitive content. Candidates may come from DOM rules, local deterministic patterns for the chosen taxonomy, face detection, visual text/OCR plus local PII matching, or task-structure perception. The policy engine maps all candidates into a common coordinate system and normally redacts the union of sensitive regions. Deterministic patterns are high-value for structured identifiers but are not sufficient for names, faces, free text, or visually embedded content.
 
-[REQUIRES BENCHMARK] Exact model(s), runtime, quantization, confidence thresholds, and fusion logic. A fixed model stack is premature until measurements show it satisfies the five evaluation criteria.
+[TBD] The sensitive-data taxonomy may include India-relevant formats only if they are within the chosen demo scope; the official statement does not prescribe Aadhaar, PAN, IFSC, UPI, or any other regional identifiers.
+
+[REQUIRES BENCHMARK] Exact model(s), runtime, quantization, confidence thresholds, fusion logic, and whether any OCR is viable in-browser. A fixed model stack or a native companion application is premature and outside the stated browser extension/JavaScript client scope unless later requirements justify it.
 
 ## 7. Local redaction
 
@@ -144,9 +150,9 @@ flowchart LR
 
 [CONFIRMED] Privacy enforcement must occur before every network request that carries visual context.
 
-[PROPOSED] Only the context builder can call the visual-context transport, and it accepts an opaque `SanitizedContext` object produced by the privacy gate—not a screenshot, canvas, blob, OCR result, or arbitrary DOM object. The gate verifies protocol version, required redaction evidence, prohibited-field absence, coordinate validity, payload size limits, and request purpose. Failed verification blocks transport and returns a local safe-fallback status.
+[PROPOSED] Only the context builder can call the visual-context transport, and it accepts an opaque `SanitizedContext` object produced by the privacy gate—not a screenshot, canvas, blob, OCR result, or arbitrary DOM object. The gate builds a fresh allowlisted serialization rather than forwarding caller-provided JSON; it strips unknown keys and rejects prohibited fields/types, raw-capture references, missing redaction evidence, invalid coordinates, oversized payloads, or an invalid request purpose. Failed verification blocks transport and returns a local safe-fallback status.
 
-[PROPOSED] Network-layer controls should restrict the extension’s server destinations, keep capture/perception modules without transport access, and log metadata-only gate decisions. Unit and integration tests should attempt prohibited payload construction and verify it cannot reach the transport boundary. TLS protects transit but is not a substitute for local sanitization.
+[PROPOSED] Network-layer controls should restrict the extension’s server destinations, keep capture/perception modules without transport access, and log metadata-only gate decisions. Unit and integration tests should attempt prohibited payload construction, unexpected keys, raw-text/base64 fields, and direct transport calls, then verify they cannot reach the transport boundary. A secondary pattern scan of allowed serialized fields may be used as defense in depth, but cannot replace schema minimization and local redaction. TLS protects transit but is not a substitute for local sanitization.
 
 ```mermaid
 sequenceDiagram
@@ -172,13 +178,13 @@ sequenceDiagram
 
 [CONFIRMED] The server interprets anonymized context through a central LLM/VLM and returns processed data or browser actions. Cloud-hosted use is allowed during SIH.
 
-[PROPOSED] The server validates the payload schema and redaction-map version before reasoning. It is designed to reason with redacted visual layout plus safe metadata, treating masked regions as unknown rather than trying to infer their contents. It returns a typed response: user-facing guidance, task-state interpretation, or structured action proposal.
+[PROPOSED] The server validates the payload schema and redaction-map version before reasoning. It is designed to reason with redacted visual layout plus safe metadata, treating masked regions as unknown rather than trying to infer their contents. All webpage-derived text and metadata are explicitly framed as untrusted data, not instructions; task policy and allowed action capabilities remain separate. It returns a typed response: user-facing guidance, task-state interpretation, or structured action proposal.
 
 [TBD] Exact server deployment, LLM/VLM, prompt/template, model hosting, and offline strategy. No server model is selected in this phase.
 
 ## 12. Browser action generation, validation, and execution
 
-[PROPOSED] The server may propose only a small action schema, for example: highlight a local target, scroll a bounded amount, open a safe navigation target, focus a non-sensitive field, or click a user-approved target. Text entry, submission, account changes, downloads, external navigation, purchases, and permission grants default to confirmation-required or denied until a task-specific policy is decided.
+[PROPOSED] The server may propose only a small action schema, for example: highlight a local target, scroll a bounded amount, open a safe navigation target, focus a non-sensitive field, or click a user-approved target. Text entry, submission, account changes, downloads, external navigation, purchases, financial effects, and permission grants require explicit, just-in-time user confirmation or are denied until a task-specific policy is decided.
 
 [PROPOSED] A proposed action contains an action type, allowed capability, target descriptor, expected page/element fingerprint, optional viewport geometry, expiry, and explanation. It contains no executable JavaScript.
 
@@ -189,7 +195,7 @@ sequenceDiagram
 - target resolves uniquely to a live visible element using local data;
 - target fingerprint, role/state, and coordinates agree within tolerance;
 - target is not sensitive, hidden, covered, cross-origin inaccessible, or changed since context capture;
-- user confirmation is present when the policy requires it.
+- user confirmation is present for every high-impact action; no server response alone can satisfy that requirement.
 
 [PROPOSED] On failure, execute nothing. Refresh sanitized context only after renewed authorization and privacy-gate processing, or give the user a safe explanation.
 
@@ -212,7 +218,7 @@ flowchart TD
 
 ## 13. Failure-safe behavior and error handling
 
-[PROPOSED] Privacy, action safety, and server availability fail closed. Detection failures, unknown page regions, redaction-rendering failures, invalid payloads, network errors, incompatible contract versions, malicious responses, stale targets, and extension API errors must result in no visual-context transmission and no browser action. The client can offer local messaging, manual user guidance, retry after explicit consent, or a new sanitized capture.
+[PROPOSED] Privacy, action safety, and server availability fail closed. Detection failures, unknown page regions, redaction-rendering failures, invalid payloads, network errors/timeouts, incompatible contract versions, worker/page lifecycle interruption, malicious responses, stale targets, and extension API errors must result in no visual-context transmission and no browser action. The client can offer local messaging, manual user guidance, retry after explicit consent, or a new sanitized capture.
 
 [PROPOSED] Hostile webpages are assumed to be able to mutate DOM, obscure targets, use deceptive overlays, and change content between capture and action. Live local revalidation immediately before each action is therefore mandatory in the proposed design.
 
