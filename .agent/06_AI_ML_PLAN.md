@@ -291,3 +291,20 @@ Local ML is justified only where DOM and deterministic rules cannot safely recov
 - Chrome/Firefox versions, minimum hardware baseline, and availability of GPU/WebGPU on the demo device.
 - Allowed extension permissions and capture constraints.
 - Candidate model/runtime license, model-card, weight-size, and browser-distribution details.
+
+CURRENT STATUS
+
+No ML/vision model is implemented yet.
+
+The deterministic DOM/privacy pipeline is complete and serves
+as the baseline for the visual-perception milestone.
+
+Next ML milestone:
+- local visual text-region detection
+- face detection
+- visual-only sensitive-region detection
+- optional local OCR
+- geometry/confidence/provenance
+- integration with existing redaction pipeline
+
+Model/runtime selection remains benchmark-driven.

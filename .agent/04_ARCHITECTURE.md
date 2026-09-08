@@ -303,3 +303,41 @@ flowchart TB
 
 - [REQUIRES BENCHMARK] Model/runtime, resolution/cropping/cadence, confidence and mask-margin policy, payload form/size, and performance budgets.
 - [TBD] Demo task, PII taxonomy, fixtures/dataset, evaluation thresholds, hardware/browser baseline, action policy, server model/deployment, and consent/retention policy.
+
+Current Architecture :
+
+Chrome Browser
+      ↓
+Content Script
+      ↓
+DOM Observation
+      ↓
+Deterministic Sanitization
+      ↓
+Privacy Gate
+      ↓
+SanitizedContext
+      ↓
+FastAPI
+      ↓
+Typed ActionResponse
+      ↓
+Local Action Validation
+      ↓
+Browser Action
+
+Future Architecture:
+                 Browser
+                    │
+          ┌─────────┴─────────┐
+          ↓                   ↓
+       DOM path          Visual path
+          ↓                   ↓
+     deterministic       local vision
+          └─────────┬─────────┘
+                    ↓
+              Privacy Gate
+                    ↓
+             Sanitized Context
+                    ↓
+                 VLM/LLM

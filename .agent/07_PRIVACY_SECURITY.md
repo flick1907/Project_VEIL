@@ -158,3 +158,32 @@ Model output can contain indirect prompt injection, false task interpretation, m
 - [TBD] Server retention/deletion policy, authentication, and deployment posture for the SIH prototype.
 - [TBD] Exact extension permissions, cross-origin iframe behavior, and user-facing inspection/audit UI.
 - [REQUIRES BENCHMARK] Confidence thresholds, OCR/model choice, redaction margins, payload granularity, and browser resource/latency budgets.
+
+IMPLEMENTATION STATUS
+
+The deterministic privacy boundary has been implemented.
+
+Verified:
+- raw password-like fields rejected
+- unknown fields stripped
+- unsanitized transport objects rejected
+- backend rejects raw password fields
+- backend rejects raw email in safe text
+- actual browser E2E request verified
+- network payload contained zero raw sensitive fixture values
+
+Current verified fixture:
+Asha Kumar
+asha@example.com
++91 9876543210
+demo-secret
+BOOK-26171
+
+None of these raw sensitive values appeared in the
+server-bound payload during E2E verification.
+
+IMPORTANT LIMITATION:
+This verification covers the current deterministic DOM path.
+Pixel-only/canvas/image/video sensitive data is NOT yet covered
+by the current implementation. That requires the visual-perception
+milestone.

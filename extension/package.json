@@ -1,0 +1,16 @@
+{
+  "name": "veil-extension",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json && esbuild src/content.ts --bundle --outfile=dist/src/content.js --target=es2022 --format=iife && esbuild src/background.ts --bundle --outfile=dist/src/background.js --target=es2022 --format=esm",
+    "test": "npm run build && node --test dist/tests/**/*.test.js && node tests/verify_e2e.js"
+  },
+  "devDependencies": {
+    "@types/node": "^26.5.0",
+    "esbuild": "^0.25.0",
+    "puppeteer": "^25.10.0",
+    "typescript": "^5.9.3"
+  }
+}

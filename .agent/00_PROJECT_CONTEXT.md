@@ -43,3 +43,40 @@ Screen and DOM state → local sensitive-data detection → local redaction and 
 - [TBD] Prescribed demo task, PII taxonomy, dataset, benchmark protocol, thresholds, hardware baseline, and action authorization policy.
 - [REQUIRES BENCHMARK] Local model/runtime, capture cadence and resolution, redaction method trade-offs, payload representation, and confidence thresholds.
 - [TBD] Exact server deployment and LLM/VLM choice; cloud-hosted use is permitted during SIH, but not required.
+
+CURRENT IMPLEMENTATION STATUS
+
+Milestone 1 — Deterministic Browser Vertical Slice: COMPLETE
+
+Working pipeline:
+Browser fixture
+→ Chrome MV3 extension
+→ local DOM observation
+→ deterministic PII detection
+→ local sanitization/redaction
+→ privacy gate
+→ SanitizedContext
+→ FastAPI /api/assist
+→ typed ActionResponse
+→ local action validation
+→ browser action execution
+
+Verified:
+- Backend tests: 3 passed
+- Extension tests: 4 passed
+- Browser E2E: passed
+- POST /api/assist: verified
+- Raw sensitive values transmitted: 0
+
+Current backend port:
+127.0.0.1:8001
+
+Current limitation:
+The implementation is currently DOM/deterministic only.
+Local visual ML, screenshot perception, OCR/face detection,
+server VLM/LLM reasoning, and advanced browser-agent behavior
+have NOT yet been implemented.
+
+NEXT MILESTONE:
+Implement lightweight on-device visual perception and integrate
+its sensitive-region output with the existing privacy gate.
