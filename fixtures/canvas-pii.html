@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>VEIL Fixture - Canvas PII</title>
+</head>
+<body>
+    <h1>Canvas Receipt</h1>
+    <canvas id="receipt-canvas" width="400" height="200" data-veil-observe="true"></canvas>
+    <script>
+        const canvas = document.getElementById('receipt-canvas');
+        const ctx = canvas.getContext('2d');
+        ctx.font = '20px Arial';
+        ctx.fillText('Order ID: ORDER-123456', 10, 50);
+        ctx.fillText('Contact: alice@example.com', 10, 100);
+    </script>
+</body>
+</html>

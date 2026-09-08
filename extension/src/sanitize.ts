@@ -74,7 +74,7 @@ export function observeAndSanitize(document: Document, origin: string, captureId
   });
 
   const payload: SanitizedPayload = {
-    protocolVersion: "veil.v1",
+    protocolVersion: "veil.v2",
     pageOrigin: origin,
     captureId,
     redactions: regions,
@@ -86,11 +86,11 @@ export function observeAndSanitize(document: Document, origin: string, captureId
 
 /** Privacy gate: reconstruct only schema-approved data before branding it. */
 export function verifyAndCreateSanitizedContext(candidate: SanitizedPayload): SanitizedContext {
-  if (candidate.protocolVersion !== "veil.v1") throw new Error("Unsupported protocol version");
+  if (candidate.protocolVersion !== "veil.v2") throw new Error("Unsupported protocol version");
   if (!/^https?:\/\//.test(candidate.pageOrigin)) throw new Error("Invalid page origin");
   if (!candidate.captureId || candidate.captureId.length > 128) throw new Error("Invalid capture id");
   if (!Array.isArray(candidate.redactions) || !Array.isArray(candidate.elements)) throw new Error("Invalid context arrays");
-  const forbiddenKeys = new Set(["password", "rawScreenshot", "rawOcr", "fullDom", "html", "inputValue"]);
+  const forbiddenKeys = new Set(["password", "rawScreenshot", "dataUrl", "rawOcr", "fullDom", "html", "inputValue"]);
   if (Object.keys(candidate as object).some((key) => forbiddenKeys.has(key))) {
     throw new Error("Sensitive raw field detected in candidate payload");
   }
@@ -98,8 +98,8 @@ export function verifyAndCreateSanitizedContext(candidate: SanitizedPayload): Sa
   const redactions: Region[] = candidate.redactions.map((region) => ({
     selector: requireSelector(region.selector),
     category: requireCategory(region.category),
-    transform: (region.transform === "blackout" ? "blackout" : "mask") as Region["transform"],
-    source: region.source === "dom" ? "dom" as const : "pattern" as const,
+    transform: (region.transform === "blackout" ? "blackout" : region.transform === "blur" ? "blur" : "mask") as Region["transform"],
+    source: (region.source === "dom" ? "dom" : region.source === "pattern" ? "pattern" : region.source === "face" ? "face" : "ocr") as Region["source"],
   }));
   const elements = candidate.elements.map((element) => ({
     selector: requireSelector(element.selector),
@@ -114,7 +114,7 @@ export function verifyAndCreateSanitizedContext(candidate: SanitizedPayload): Sa
   if (allowedActions.length === 0) throw new Error("No permitted actions");
 
   return SanitizedContext.fromVerifiedPayload({
-    protocolVersion: "veil.v1",
+    protocolVersion: "veil.v2",
     pageOrigin: candidate.pageOrigin,
     captureId: candidate.captureId,
     redactions,

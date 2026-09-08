@@ -5,7 +5,7 @@ import { verifyAndCreateSanitizedContext } from "../src/sanitize.js";
 import { sendSanitizedContext } from "../src/transport.js";
 
 const validPayload = {
-  protocolVersion: "veil.v1" as const,
+  protocolVersion: "veil.v2" as const,
   pageOrigin: "http://127.0.0.1:8001",
   captureId: "fixture-1",
   redactions: [{ selector: "#email", category: "email" as const, transform: "mask" as const, source: "pattern" as const }],
@@ -52,3 +52,26 @@ test("privacy gate sanitizes element labels with sensitive keywords", () => {
   assert.equal(rawText.includes('"label":"password"'), false);
 });
 
+test("privacy gate rejects raw capture fields from reaching transport", () => {
+  assert.throws(
+    () => verifyAndCreateSanitizedContext({ ...validPayload, dataUrl: "data:image/png;base64,fake" } as typeof validPayload),
+    /Sensitive raw field/,
+  );
+  assert.throws(
+    () => verifyAndCreateSanitizedContext({ ...validPayload, rawScreenshot: "bitmap_reference" } as typeof validPayload),
+    /Sensitive raw field/,
+  );
+});
+
+test("face detection regions use the blur transform", () => {
+  const payloadWithFace = {
+    ...validPayload,
+    redactions: [
+      { selector: "#profile-picture", category: "configured" as const, transform: "blur" as const, source: "face" as const }
+    ]
+  };
+  const context = verifyAndCreateSanitizedContext(payloadWithFace);
+  const sent = context.toPayload();
+  assert.equal(sent.redactions[0].transform, "blur");
+  assert.equal(sent.redactions[0].source, "face");
+});

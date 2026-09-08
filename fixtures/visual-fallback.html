@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>VEIL Fixture - Visual Fallback</title>
+</head>
+<body>
+    <h1>Unknown DOM Structure</h1>
+    <!-- Notice there is no data-veil-observe="true" anywhere here -->
+    <div>
+        <p>This paragraph might contain PII like alice@example.com or a secret, but VEIL DOM path won't see it because it is not marked.</p>
+        <p>The visual fallback should trigger OCR to scan and redact this.</p>
+    </div>
+</body>
+</html>

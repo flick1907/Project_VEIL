@@ -7,7 +7,7 @@ client = TestClient(app)
 
 def valid_context() -> dict:
     return {
-        "protocolVersion": "veil.v1",
+        "protocolVersion": "veil.v2",
         "pageOrigin": "http://127.0.0.1:8001",
         "captureId": "fixture-1",
         "redactions": [
@@ -45,5 +45,12 @@ def test_backend_rejects_raw_password_and_unknown_fields() -> None:
 def test_backend_rejects_raw_email_in_safe_text() -> None:
     payload = valid_context()
     payload["elements"][0]["text"] = "alice@example.com"
+    response = client.post("/api/assist", json=payload)
+    assert response.status_code == 422
+
+
+def test_backend_rejects_v1_protocol() -> None:
+    payload = valid_context()
+    payload["protocolVersion"] = "veil.v1"
     response = client.post("/api/assist", json=payload)
     assert response.status_code == 422

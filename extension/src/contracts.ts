@@ -1,11 +1,11 @@
 export type PiiCategory = "password" | "email" | "phone" | "configured";
-export type RedactionTransform = "blackout" | "mask";
+export type RedactionTransform = "blackout" | "mask" | "blur";
 
 export interface Region {
   selector: string;
   category: PiiCategory;
   transform: RedactionTransform;
-  source: "dom" | "pattern";
+  source: "dom" | "pattern" | "face" | "ocr";
 }
 
 export interface SafeElement {
@@ -19,7 +19,7 @@ export interface SafeElement {
 }
 
 export interface SanitizedPayload {
-  protocolVersion: "veil.v1";
+  protocolVersion: "veil.v2";
   pageOrigin: string;
   captureId: string;
   redactions: Region[];
@@ -42,6 +42,9 @@ export class SanitizedContext {
   }
 
   static fromVerifiedPayload(payload: SanitizedPayload): SanitizedContext {
+    if (payload.protocolVersion !== "veil.v2") {
+      throw new Error("Invalid protocol version");
+    }
     return new SanitizedContext(payload);
   }
 

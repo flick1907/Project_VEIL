@@ -19,8 +19,8 @@ class PiiCategory(str, Enum):
 class Redaction(StrictModel):
     selector: str = Field(pattern=r"^(#|\[data-veil-observe)")
     category: PiiCategory
-    transform: Literal["blackout", "mask"]
-    source: Literal["dom", "pattern"]
+    transform: Literal["blackout", "mask", "blur"]
+    source: Literal["dom", "pattern", "face", "ocr"]
 
 
 class SafeElement(StrictModel):
@@ -34,7 +34,7 @@ class SafeElement(StrictModel):
 
 
 class SanitizedContext(StrictModel):
-    protocolVersion: Literal["veil.v1"]
+    protocolVersion: Literal["veil.v2"]
     pageOrigin: str = Field(pattern=r"^https?://")
     captureId: str = Field(min_length=1, max_length=128)
     redactions: list[Redaction]

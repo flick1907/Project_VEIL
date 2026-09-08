@@ -1,6 +1,6 @@
 import { ActionResponse, SanitizedContext } from "./contracts.js";
 
-const API_URL = "http://127.0.0.1:8001/api/assist";
+const API_URL = "http://127.0.0.1:8000/api/assist";
 
 /** The only network path for page context. Raw objects are rejected at runtime. */
 export async function sendSanitizedContext(context: SanitizedContext, fetchImpl: typeof fetch = fetch): Promise<ActionResponse> {
