@@ -2,10 +2,11 @@ import path from "path";
 import puppeteer from "puppeteer";
 
 const extensionPath = path.resolve("./");
+// dom is fast (no ML). ocr and face need Tesseract/ONNX WASM cold-start time.
 const FIXTURES = [
-  { url: "http://127.0.0.1:8000/fixture", type: "dom" },
-  { url: "http://127.0.0.1:8000/fixtures/canvas-pii.html", type: "ocr" },
-  { url: "http://127.0.0.1:8000/fixtures/face.html", type: "face" }
+  { url: "http://127.0.0.1:8000/fixture",                   type: "dom",  timeoutMs: 30000 },
+  { url: "http://127.0.0.1:8000/fixtures/canvas-pii.html",  type: "ocr",  timeoutMs: 90000 },
+  { url: "http://127.0.0.1:8000/fixtures/face.html",        type: "face", timeoutMs: 90000 },
 ];
 
 async function verify() {
@@ -66,19 +67,18 @@ async function verify() {
         }
       });
 
-      console.log("Waiting for POST payload...");
-      // Wait for payload capture instead of waiting for the LLM to reply
-      await page.waitForFunction(() => window.__veil_payload_captured || document.querySelector("#veil-result")?.textContent?.includes("Blocked"), { timeout: 30000 })
-        .catch(() => {}); // Fallback if the page doesn't set it, we just poll the node side
-
-      // Polling node-side for the payload
-      for (let i = 0; i < 300; i++) {
+      console.log(`Waiting for POST payload (timeout: ${fixture.timeoutMs / 1000}s)...`);
+      // ML fixtures (OCR/face) need time for WASM cold-start + inference before the POST fires.
+      // We poll node-side for the captured request flag.
+      const pollInterval = 200;
+      const maxPolls = fixture.timeoutMs / pollInterval;
+      for (let i = 0; i < maxPolls; i++) {
         if (payloadCaptured) break;
-        await new Promise(r => setTimeout(r, 100));
+        await new Promise(r => setTimeout(r, pollInterval));
       }
 
       if (!assistPayload) {
-        throw new Error(`FAIL: No POST /api/assist request was captured for ${fixture.type}!`);
+        throw new Error(`FAIL: No POST /api/assist request was captured for ${fixture.type}! (waited ${fixture.timeoutMs / 1000}s)`);
       }
 
       const payloadObj = JSON.parse(assistPayload);

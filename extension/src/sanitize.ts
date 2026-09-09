@@ -137,7 +137,7 @@ function requireSelector(value: string): string {
   return value;
 }
 function requireCategory(value: PiiCategory): PiiCategory {
-  if (!["password", "email", "phone", "configured"].includes(value)) throw new Error("Unknown PII category");
+  if (!["password", "email", "phone", "configured", "id"].includes(value)) throw new Error("Unknown PII category");
   return value;
 }
 function requireTag(value: SafeElement["tag"]): SafeElement["tag"] {

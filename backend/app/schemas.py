@@ -14,6 +14,7 @@ class PiiCategory(str, Enum):
     email = "email"
     phone = "phone"
     configured = "configured"
+    id = "id"
 
 
 class Redaction(StrictModel):

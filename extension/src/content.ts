@@ -15,7 +15,7 @@ function status(message: string, progress?: number, isWarning = false, extraStat
 
 import { detectFaces } from "./perception/face.js";
 import { detectText } from "./perception/ocr.js";
-import { Region } from "./contracts.js";
+import { Region, PiiCategory } from "./contracts.js";
 
 async function runVerticalSlice(): Promise<void> {
   try {
@@ -52,28 +52,51 @@ async function runVerticalSlice(): Promise<void> {
         console.log(`Words: ${text.map(t => t.text).join(', ')}`);
       }
       
-      // Convert OCR text to pattern matches
+      // Convert OCR text to PII regions — only flag actual PII patterns,
+      // NOT plain English UI labels like "Name", "Email", "Phone", "Find booking".
+      //
+      // PII patterns we detect visually (for canvas-rendered content the DOM can't see):
+      //   - Email addresses:      contains "@"
+      //   - Phone numbers:        4+ consecutive digits (with optional separators)
+      //   - Alphanumeric IDs:     mixed letters+numbers like "BOOK-26171", "TXN-9921"
+      //   - Pure number strings:  credit card / SSN / order number type values
+      //
+      // We deliberately do NOT mask:
+      //   - Pure dictionary words (UI labels, headings, button text)
+      //   - Short common words
+
+      const EMAIL_RE    = /[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/;
+      const PHONE_RE    = /(\+?\d[\d\s\-().]{6,}\d)/;
+      const ALPHANUM_ID = /^[A-Z]{2,}-\d+$|^[A-Z0-9]{5,}$/;   // e.g. BOOK-26171, TXN99211
+      const PURE_NUM    = /^\d{4,}$/;                           // 4+ digit number
+
       for (const t of text) {
-        // Tesseract often splits emails into separate words (e.g. "alice", "@", "example.com")
-        // For the demo and E2E tests, we will aggressively mask almost any text returned by OCR to prove the pipeline works
-        // even if Puppeteer screenshot resolution degrades the OCR accuracy.
-        const textUpper = t.text.toUpperCase();
-        if (config.maskPii && t.text.trim().length > 2) {
-           mlRegions.push({
-             box: [t.box.x, t.box.y, t.box.width, t.box.height],
-             category: /\d{3,}/.test(t.text) ? "phone" : "email",
-             transform: "mask",
-             source: "ocr"
-           });
+        const word = t.text.trim();
+        if (!config.maskPii || word.length < 3) continue;
+
+        let category: PiiCategory | null = null;
+
+        if (EMAIL_RE.test(word)) {
+          category = "email";
+        } else if (PHONE_RE.test(word)) {
+          category = "phone";
+        } else if (PURE_NUM.test(word)) {
+          category = "phone";           // treat bare digit strings as sensitive numbers
+        } else if (ALPHANUM_ID.test(word)) {
+          category = "id";
+        }
+
+        if (category) {
+          console.log(`OCR PII detected: "${word}" → ${category}`);
+          mlRegions.push({
+            box: [t.box.x, t.box.y, t.box.width, t.box.height],
+            category,
+            transform: "mask",
+            source: "ocr"
+          });
         }
       }
-      
-      const debugImg = document.createElement("img");
-      debugImg.src = captureRes.dataUrl;
-      debugImg.style.width = "400px";
-      debugImg.style.border = "5px solid red";
-      document.body.appendChild(debugImg);
-      
+
     } else {
       console.error("VEIL_CAPTURE failed:", captureRes);
     }
@@ -83,13 +106,17 @@ async function runVerticalSlice(): Promise<void> {
     if (existingOverlay) existingOverlay.remove();
 
     if (mlRegions.length > 0) {
+      // captureVisibleTab() captures in physical pixels, but CSS uses logical (CSS) pixels.
+      // On high-DPI screens (e.g. 125%, 150% scaling), we must divide by devicePixelRatio.
+      const dpr = window.devicePixelRatio || 1;
+
       const overlay = document.createElement("div");
       overlay.id = "veil-ml-overlay";
-      overlay.style.position = "absolute";
+      overlay.style.position = "fixed";    // fixed = relative to viewport, matching the screenshot
       overlay.style.top = "0";
       overlay.style.left = "0";
-      overlay.style.width = "100%";
-      overlay.style.height = "100%";
+      overlay.style.width = "100vw";
+      overlay.style.height = "100vh";
       overlay.style.pointerEvents = "none";
       overlay.style.zIndex = "999999";
       
@@ -97,10 +124,10 @@ async function runVerticalSlice(): Promise<void> {
         if (region.box) {
           const boxEl = document.createElement("div");
           boxEl.style.position = "absolute";
-          boxEl.style.left = `${region.box[0]}px`;
-          boxEl.style.top = `${region.box[1]}px`;
-          boxEl.style.width = `${region.box[2]}px`;
-          boxEl.style.height = `${region.box[3]}px`;
+          boxEl.style.left = `${region.box[0] / dpr}px`;
+          boxEl.style.top = `${region.box[1] / dpr}px`;
+          boxEl.style.width = `${region.box[2] / dpr}px`;
+          boxEl.style.height = `${region.box[3] / dpr}px`;
           boxEl.style.backgroundColor = region.transform === "blur" ? "rgba(150, 150, 150, 0.9)" : "black";
           boxEl.style.border = "2px solid red";
           boxEl.style.color = "white";
