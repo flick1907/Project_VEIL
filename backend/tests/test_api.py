@@ -8,7 +8,7 @@ client = TestClient(app)
 def valid_context() -> dict:
     return {
         "protocolVersion": "veil.v2",
-        "pageOrigin": "http://127.0.0.1:8001",
+        "pageOrigin": "http://127.0.0.1:8000",
         "captureId": "fixture-1",
         "redactions": [
             {"selector": "#email", "category": "email", "transform": "mask", "source": "pattern"}

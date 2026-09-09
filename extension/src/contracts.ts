@@ -2,10 +2,17 @@ export type PiiCategory = "password" | "email" | "phone" | "configured";
 export type RedactionTransform = "blackout" | "mask" | "blur";
 
 export interface Region {
-  selector: string;
+  selector?: string;
+  box?: [number, number, number, number]; // [x, y, width, height]
   category: PiiCategory;
   transform: RedactionTransform;
   source: "dom" | "pattern" | "face" | "ocr";
+}
+
+export interface RedactionConfig {
+  maskPasswords: boolean;
+  maskPii: boolean;
+  blurFaces: boolean;
 }
 
 export interface SafeElement {

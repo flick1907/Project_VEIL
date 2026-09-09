@@ -47,3 +47,7 @@ export async function runBenchmark(modelUrl: string, inputs: Record<string, ort.
 
   return result;
 }
+
+if (typeof window !== 'undefined') {
+  (window as any).runBenchmark = runBenchmark;
+}

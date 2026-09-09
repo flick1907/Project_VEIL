@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VEIL Quick Actions</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            width: 200px;
+            padding: 15px;
+            background-color: #f5f5f5;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .status-box {
+            background-color: #fff;
+            border: 1px solid #ccc;
+            padding: 8px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 14px;
+        }
+        .status-green {
+            color: #008000;
+        }
+        button {
+            padding: 8px;
+            background-color: #000080;
+            color: white;
+            border: 1px solid #000;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        button:hover {
+            background-color: #1084d0;
+        }
+    </style>
+</head>
+<body>
+    <div class="status-box">
+        Session: <span class="status-green">ACTIVE</span>
+    </div>
+    <button id="run-veil">Run VEIL (Current Tab)</button>
+    <button id="open-dashboard">Open Dashboard</button>
+
+    <script src="dist/src/popup.js"></script>
+</body>
+</html>

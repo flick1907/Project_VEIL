@@ -20,36 +20,36 @@
             </div>
             <div class="window-body">
                 <div class="tabs">
-                    <button class="tab active" onclick="switchTab('status')">Status</button>
-                    <button class="tab" onclick="switchTab('settings')">Settings</button>
-                    <button class="tab" onclick="switchTab('logs')">Logs</button>
+                    <button class="tab active" data-tab="status">Status</button>
+                    <button class="tab" data-tab="settings">Settings</button>
+                    <button class="tab" data-tab="logs">Logs</button>
                 </div>
                 
                 <div class="tab-content" id="tab-status">
                     <div class="status-panel">
                         <div class="field-row">
                             <label>Session:</label>
-                            <span class="status-text green">ACTIVE</span>
+                            <span class="status-text">READY</span>
                         </div>
                         <div class="field-row">
                             <label>DOM Observer:</label>
-                            <input type="checkbox" checked disabled>
+                            <input type="checkbox" id="checkbox-observer" disabled>
                         </div>
                         <div class="field-row">
                             <label>Visual Fallback:</label>
-                            <input type="checkbox" checked disabled>
+                            <input type="checkbox" id="checkbox-fallback" disabled>
                         </div>
                         <fieldset>
                             <legend>Local Perception</legend>
                             <div class="progress-bar">
-                                <div class="progress-fill" style="width: 75%;"></div>
+                                <div class="progress-fill" style="width: 0%;"></div>
                             </div>
-                            <p class="small-text">Sanitizing visual context...</p>
+                            <p class="small-text">Waiting for extension execution...</p>
                         </fieldset>
                         <fieldset>
                             <legend>Privacy Gate</legend>
                             <div class="field-row">
-                                <input type="radio" id="gate-verified" name="gate" checked disabled>
+                                <input type="radio" id="gate-verified" name="gate" disabled>
                                 <label for="gate-verified">Verified Context Only</label>
                             </div>
                             <div class="field-row">
@@ -59,8 +59,8 @@
                         </fieldset>
                     </div>
                     <div class="action-buttons">
-                        <button class="btn default-btn" onclick="showDialog()">Authorize Action</button>
-                        <button class="btn">Cancel</button>
+                        <button class="btn default-btn" id="btn-authorize">Authorize Action</button>
+                        <button class="btn" id="btn-cancel">Cancel</button>
                     </div>
                 </div>
 
@@ -84,12 +84,6 @@
 
                 <div class="tab-content hidden" id="tab-logs">
                     <ul class="tree-view">
-                        <li>[12:30:00] Session started</li>
-                        <li>[12:30:02] Local DOM perceived</li>
-                        <li>[12:30:03] <span class="warning">Warning: Canvas element detected. Invoking visual fallback.</span></li>
-                        <li>[12:30:05] Redacted 2 PII regions</li>
-                        <li>[12:30:06] Privacy Gate: Passed</li>
-                        <li>[12:30:08] Server Action Proposed: Click 'Next'</li>
                     </ul>
                 </div>
             </div>
@@ -105,7 +99,7 @@
             <div class="title-bar">
                 <div class="title-bar-text">Action Validator</div>
                 <div class="title-bar-controls">
-                    <button aria-label="Close" onclick="closeDialog()"></button>
+                    <button aria-label="Close" id="btn-dialog-close"></button>
                 </div>
             </div>
             <div class="window-body">
@@ -114,8 +108,8 @@
                     <p>Server proposes: <strong>Click 'Submit'</strong>.<br>This requires user confirmation.</p>
                 </div>
                 <div class="dialog-buttons">
-                    <button class="btn default-btn" onclick="closeDialog()">Allow</button>
-                    <button class="btn" onclick="closeDialog()">Deny</button>
+                    <button class="btn default-btn" id="btn-dialog-allow">Allow</button>
+                    <button class="btn" id="btn-dialog-deny">Deny</button>
                 </div>
             </div>
         </div>

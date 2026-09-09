@@ -1,6 +1,7 @@
 import {
   ActionType,
   PiiCategory,
+  RedactionConfig,
   Region,
   SafeElement,
   SanitizedContext,
@@ -21,10 +22,10 @@ function selectorFor(element: Element, index: number): string {
   return `[data-veil-observe="true"]:nth-of-type(${index + 1})`;
 }
 
-function categoryFor(value: string, input: HTMLInputElement | null): PiiCategory | null {
-  if (input?.type === "password" || /password|secret/i.test(value)) return "password";
-  if (EMAIL.test(value)) return "email";
-  if (PHONE.test(value)) return "phone";
+function categoryFor(value: string, input: HTMLInputElement | null, config: RedactionConfig): PiiCategory | null {
+  if (config.maskPasswords && (input?.type === "password" || /password|secret/i.test(value))) return "password";
+  if (config.maskPii && EMAIL.test(value)) return "email";
+  if (config.maskPii && PHONE.test(value)) return "phone";
   return CONFIGURABLE_PATTERNS.find(({ expression }) => expression.test(value))?.category ?? null;
 }
 
@@ -35,8 +36,8 @@ function safeText(element: Element, category: PiiCategory | null): string | null
 }
 
 /** Strict observation: inspect only explicit fixture/demo nodes, never full DOM/HTML. */
-export function observeAndSanitize(document: Document, origin: string, captureId = crypto.randomUUID()): SanitizedContext {
-  const regions: Region[] = [];
+export function observeAndSanitize(document: Document, origin: string, config: RedactionConfig, mlRegions: Region[] = [], captureId = crypto.randomUUID()): SanitizedContext {
+  const regions: Region[] = [...mlRegions];
   const elements: SafeElement[] = [];
   const observed = Array.from(document.querySelectorAll("[data-veil-observe='true']"));
 
@@ -45,7 +46,7 @@ export function observeAndSanitize(document: Document, origin: string, captureId
     if (!ALLOWED_TAGS.has(tag)) return;
     const input = element instanceof HTMLInputElement ? element : null;
     const candidate = input ? input.value : element.textContent ?? "";
-    const category = categoryFor(candidate, input);
+    const category = categoryFor(candidate, input, config);
     const selector = selectorFor(element, index);
 
     if (category) {
@@ -62,7 +63,7 @@ export function observeAndSanitize(document: Document, origin: string, captureId
       selector,
       tag: tag as SafeElement["tag"],
       role: element.getAttribute("role"),
-      label: label && !categoryFor(label, null) ? label.slice(0, 120) : null,
+      label: label && !categoryFor(label, null, config) ? label.slice(0, 120) : null,
       text: input ? null : safeText(element, category),
       ...(input
         ? {
@@ -96,7 +97,8 @@ export function verifyAndCreateSanitizedContext(candidate: SanitizedPayload): Sa
   }
 
   const redactions: Region[] = candidate.redactions.map((region) => ({
-    selector: requireSelector(region.selector),
+    ...(region.selector ? { selector: requireSelector(region.selector) } : {}),
+    ...(region.box ? { box: requireBox(region.box) } : {}),
     category: requireCategory(region.category),
     transform: (region.transform === "blackout" ? "blackout" : region.transform === "blur" ? "blur" : "mask") as Region["transform"],
     source: (region.source === "dom" ? "dom" : region.source === "pattern" ? "pattern" : region.source === "face" ? "face" : "ocr") as Region["source"],
@@ -131,7 +133,7 @@ function nullableShortString(value: string | null): string | null {
   return value === null ? null : shortString(value);
 }
 function requireSelector(value: string): string {
-  if (typeof value !== "string" || !/^(#|\[data-veil-observe)/.test(value)) throw new Error("Unsafe selector");
+  if (typeof value !== "string" || !/^(#|\[data-veil-observe|body)/.test(value)) throw new Error("Unsafe selector");
   return value;
 }
 function requireCategory(value: PiiCategory): PiiCategory {
@@ -141,4 +143,8 @@ function requireCategory(value: PiiCategory): PiiCategory {
 function requireTag(value: SafeElement["tag"]): SafeElement["tag"] {
   if (!ALLOWED_TAGS.has(value)) throw new Error("Unsafe element tag");
   return value;
+}
+function requireBox(value: any): [number, number, number, number] {
+  if (!Array.isArray(value) || value.length !== 4) throw new Error("Invalid box");
+  return [Number(value[0]), Number(value[1]), Number(value[2]), Number(value[3])];
 }

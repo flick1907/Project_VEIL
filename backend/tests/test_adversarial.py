@@ -8,7 +8,7 @@ client = TestClient(app)
 def test_rejects_adversarial_target():
     payload = {
         "protocolVersion": "veil.v2",
-        "pageOrigin": "http://127.0.0.1:8001",
+        "pageOrigin": "http://127.0.0.1:8000",
         "captureId": "adversarial-test-123",
         "redactions": [],
         "elements": [

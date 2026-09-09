@@ -4,7 +4,8 @@
   "version": "0.1.0",
   "description": "Local DOM sanitization before a controlled demo request.",
   "action": {
-    "default_title": "Run VEIL demo"
+    "default_title": "Run VEIL demo",
+    "default_popup": "popup.html"
   },
   "background": {
     "service_worker": "dist/src/background.js",
@@ -12,11 +13,17 @@
   },
   "content_scripts": [
     {
-      "matches": ["http://127.0.0.1:8001/*", "http://localhost:8001/*"],
+      "matches": ["http://127.0.0.1:8000/*", "http://localhost:8000/*"],
       "js": ["dist/src/content.js"],
       "run_at": "document_idle"
     }
   ],
-  "host_permissions": ["http://127.0.0.1:8001/*", "http://localhost:8001/*"],
-  "permissions": ["activeTab"]
+  "host_permissions": ["<all_urls>"],
+  "permissions": ["activeTab", "tabs", "storage"],
+  "web_accessible_resources": [
+    {
+      "resources": ["assets/models/*", "assets/models/**/*.wasm", "assets/models/tesseract/*"],
+      "matches": ["<all_urls>"]
+    }
+  ]
 }

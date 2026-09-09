@@ -5,3 +5,13 @@ __pycache__/
 .venv/
 *.pyc
 .env
+.DS_Store
+
+# Large binary ML model assets — fetched at build time via `npm run setup-models`
+extension/assets/models/*.onnx
+extension/assets/models/*.wasm
+extension/assets/models/*.mjs
+extension/assets/models/tesseract/eng.traineddata.gz
+extension/assets/models/tesseract/tesseract-core.wasm
+extension/assets/models/tesseract/tesseract-core.wasm.js
+extension/assets/models/tesseract/worker.min.js

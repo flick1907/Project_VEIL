@@ -17,7 +17,8 @@ class PiiCategory(str, Enum):
 
 
 class Redaction(StrictModel):
-    selector: str = Field(pattern=r"^(#|\[data-veil-observe)")
+    selector: str | None = Field(default=None, pattern=r"^(#|\[data-veil-observe|body)")
+    box: list[int] | None = Field(default=None, min_length=4, max_length=4)
     category: PiiCategory
     transform: Literal["blackout", "mask", "blur"]
     source: Literal["dom", "pattern", "face", "ocr"]

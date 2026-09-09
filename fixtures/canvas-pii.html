@@ -6,13 +6,16 @@
 </head>
 <body>
     <h1>Canvas Receipt</h1>
-    <canvas id="receipt-canvas" width="400" height="200" data-veil-observe="true"></canvas>
+    <canvas id="receipt-canvas" width="800" height="600" data-veil-observe="true" style="border: 1px solid black; background-color: white;"></canvas>
     <script>
         const canvas = document.getElementById('receipt-canvas');
         const ctx = canvas.getContext('2d');
-        ctx.font = '20px Arial';
-        ctx.fillText('Order ID: ORDER-123456', 10, 50);
-        ctx.fillText('Contact: alice@example.com', 10, 100);
+        ctx.fillStyle = "white";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = "black";
+        ctx.font = 'bold 48px Arial';
+        ctx.fillText('Order ID: ORDER-123456', 50, 100);
+        ctx.fillText('Contact: alice@example.com', 50, 200);
     </script>
 </body>
 </html>

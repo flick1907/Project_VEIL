@@ -4,7 +4,8 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "build": "tsc -p tsconfig.json && esbuild src/content.ts --bundle --outfile=dist/src/content.js --target=es2022 --format=iife && esbuild src/background.ts --bundle --outfile=dist/src/background.js --target=es2022 --format=esm",
+    "setup-models": "node scripts/fetch_models.js",
+    "build": "npm run setup-models && tsc -p tsconfig.json && esbuild src/content.ts --bundle --outfile=dist/src/content.js --target=es2022 --format=iife && esbuild src/background.ts --bundle --outfile=dist/src/background.js --target=es2022 --format=esm && esbuild src/popup.ts --bundle --outfile=dist/src/popup.js --target=es2022 --format=esm && node -e \"const fs=require('fs'); fs.rmSync('dist/frontend', {recursive: true, force: true}); fs.cpSync('../frontend', 'dist/frontend', {recursive: true});\"",
     "test": "npm run build && node --test dist/tests/**/*.test.js && node tests/verify_e2e.js"
   },
   "devDependencies": {
@@ -14,6 +15,7 @@
     "typescript": "^5.9.3"
   },
   "dependencies": {
-    "onnxruntime-web": "^1.29.0"
+    "onnxruntime-web": "^1.29.0",
+    "tesseract.js": "^5.1.0"
   }
 }

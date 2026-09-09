@@ -14,17 +14,19 @@ from .schemas import ActionResponse, ActionType, SanitizedContext, TypedAction
 app = FastAPI(title="Project VEIL deterministic vertical slice")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://127.0.0.1:8001", "http://localhost:8001"],
+    allow_origins=["http://127.0.0.1:8000", "http://localhost:8000"],
     allow_methods=["POST"],
     allow_headers=["content-type"],
 )
 
-FIXTURE = Path(__file__).resolve().parents[2] / "fixtures" / "demo.html"
+from fastapi.staticfiles import StaticFiles
 
+FIXTURES_DIR = Path(__file__).resolve().parents[2] / "fixtures"
+app.mount("/fixtures", StaticFiles(directory=FIXTURES_DIR), name="fixtures")
 
 @app.get("/fixture")
 def fixture() -> FileResponse:
-    return FileResponse(FIXTURE)
+    return FileResponse(FIXTURES_DIR / "demo.html")
 
 
 def clean_schema(schema: dict) -> dict:

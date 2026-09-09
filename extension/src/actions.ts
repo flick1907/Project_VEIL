@@ -1,9 +1,10 @@
 import { ActionType, TypedAction } from "./contracts.js";
 
-const SAFE_ACTIONS = new Set<ActionType>(["click", "type", "scroll", "extract_safe_text"]);
+const SAFE_ACTIONS = new Set<ActionType>(["scroll", "extract_safe_text"]);
+
+declare const chrome: { runtime: { sendMessage(message: unknown, responseCallback?: (response: any) => void): void } };
 
 export function validateAction(action: TypedAction, document: Document, origin: string): string | null {
-  if (!SAFE_ACTIONS.has(action.actionType)) return "Action is not allowlisted";
   if (Number.isNaN(Date.parse(action.expiresAt)) || Date.parse(action.expiresAt) < Date.now()) return "Action has expired";
   if (action.actionType === "scroll") return typeof action.scrollY === "number" ? null : "Scroll action needs scrollY";
   if (!action.selector || !action.expectedTag) return "Action target is incomplete";
@@ -16,9 +17,26 @@ export function validateAction(action: TypedAction, document: Document, origin: 
   return null;
 }
 
-export function executeAction(action: TypedAction, document: Document, window: Window): string {
+function requestConfirmation(action: TypedAction): Promise<boolean> {
+  return new Promise((resolve) => {
+    const actionId = Math.random().toString(36).substring(7);
+    chrome.runtime.sendMessage({ type: "VEIL_REQUIRE_CONFIRMATION", action, actionId }, (response) => {
+      resolve(response?.allow === true);
+    });
+  });
+}
+
+export async function executeAction(action: TypedAction, document: Document, window: Window): Promise<string> {
   const error = validateAction(action, document, window.location.origin);
   if (error) throw new Error(error);
+
+  if (!SAFE_ACTIONS.has(action.actionType)) {
+    const confirmed = await requestConfirmation(action);
+    if (!confirmed) {
+      throw new Error("Action denied by user");
+    }
+  }
+
   if (action.actionType === "scroll") {
     window.scrollBy({ top: action.scrollY!, behavior: "smooth" });
     return "Scrolled safely";

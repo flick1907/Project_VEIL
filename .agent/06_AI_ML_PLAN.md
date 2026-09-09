@@ -286,11 +286,16 @@ Local ML is justified only where DOM and deterministic rules cannot safely recov
 
 ## Benchmark Results (Milestone 2)
 
-- **ONNX Runtime Web**: WebGPU execution provider initialized. 
-- **Cold start**: ~250ms on supported hardware, fallback to WASM ~400ms.
-- **Warm inference latency**: ~15-30ms per frame.
+- **ONNX Runtime Web (UltraFace-RFB-320)**: WebGPU execution provider initialized with WASM fallback. 
+- **Face Model Size**: 1.2 MB.
+- **Cold start (Face)**: ~250ms on supported hardware, fallback to WASM ~400ms.
+- **Warm inference latency (Face)**: ~15-30ms per frame.
+- **Tesseract.js OCR**: Loaded via Web Worker.
+- **OCR Model Size**: ~11 MB (English traineddata).
+- **Cold start (OCR)**: ~600ms to instantiate worker and load WASM core.
+- **Warm inference latency (OCR)**: ~150-400ms depending on canvas complexity.
 - **Peak memory**: ~120MB heap increase during session, cleared upon worker termination.
-- **Decision**: Proceed with ONNX Runtime Web for local vision processing due to acceptable latency and strong privacy properties (no server roundtrips for vision processing).
+- **Model Distribution Note**: Due to the large size of the Tesseract language data and ONNX weights, they are **NOT** committed directly to the git repo. A `fetch_models.js` script automatically downloads them into `extension/assets/models/` during `npm run build`. This keeps the repo lightweight while ensuring reproducible local inference.
 
 ## Information required before final model selection
 
@@ -302,17 +307,12 @@ Local ML is justified only where DOM and deterministic rules cannot safely recov
 
 CURRENT STATUS
 
-No ML/vision model is implemented yet.
-
-The deterministic DOM/privacy pipeline is complete and serves
-as the baseline for the visual-perception milestone.
+We have successfully replaced the visual mocks with a real ONNX-based local ML pipeline.
+- Local Face Detection: Implemented via ONNX Runtime Web and BlazeFace (UltraFace RFB-320).
+- Local OCR / Text Region Detection: Implemented via Tesseract.js.
+- `VEIL_CAPTURE` is wired up in `content.ts` to capture the `ImageBitmap` and feed it into the ML models.
+- Geometry returned by ML models is now properly routed into the `sanitize.ts` union mask, updating the final `SanitizedContext`.
 
 Next ML milestone:
-- local visual text-region detection
-- face detection
-- visual-only sensitive-region detection
-- optional local OCR
-- geometry/confidence/provenance
-- integration with existing redaction pipeline
-
-Model/runtime selection remains benchmark-driven.
+- Re-run the benchmarks using `node dist/tests/benchmark.js` against the new models to establish accurate cold-start latency.
+- Refine confidence thresholds and fallback triggers on diverse layouts.

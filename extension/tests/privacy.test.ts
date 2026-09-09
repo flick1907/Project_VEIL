@@ -6,7 +6,7 @@ import { sendSanitizedContext } from "../src/transport.js";
 
 const validPayload = {
   protocolVersion: "veil.v2" as const,
-  pageOrigin: "http://127.0.0.1:8001",
+  pageOrigin: "http://127.0.0.1:8000",
   captureId: "fixture-1",
   redactions: [{ selector: "#email", category: "email" as const, transform: "mask" as const, source: "pattern" as const }],
   elements: [{ selector: "#search", tag: "input" as const, role: null, label: "Search", text: null, inputType: "search", valueState: "empty" as const }],
