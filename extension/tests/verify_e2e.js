@@ -12,6 +12,7 @@ async function verify() {
   console.log("Launching browser with extension from:", extensionPath);
   const browser = await puppeteer.launch({
     headless: false,
+    executablePath: "C:\\Program Files\\BraveSoftware\\Brave-Browser\\Application\\brave.exe",
     args: [
       `--disable-extensions-except=${extensionPath}`,
       `--load-extension=${extensionPath}`,

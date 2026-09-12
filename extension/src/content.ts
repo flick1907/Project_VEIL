@@ -47,42 +47,46 @@ async function runVerticalSlice(): Promise<void> {
         mlRegions.push(...faces);
       }
       
+      // Push OCR matches into mlRegions so they reach the privacy gate payload.
+      // This is essential for canvas/image fixtures where DOM inspection can't see PII.
+      // Note: OCR box coordinates are excluded from the VISUAL overlay (selector-only rendering),
+      // so they won't produce misaligned floating boxes on DOM-based fixtures.
       console.log(`ML Perception completed. Faces: ${faces.length}, Words detected: ${text.length}`);
-      if (text.length > 0) {
-        console.log(`Words: ${text.map(t => t.text).join(', ')}`);
-      }
-      
-      // Convert OCR text to pattern matches
       for (const t of text) {
-        // Tesseract often splits emails into separate words (e.g. "alice", "@", "example.com")
-        // For the demo and E2E tests, we will aggressively mask almost any text returned by OCR to prove the pipeline works
-        // even if Puppeteer screenshot resolution degrades the OCR accuracy.
-        const textUpper = t.text.toUpperCase();
-        if (config.maskPii && t.text.trim().length > 2) {
-           mlRegions.push({
-             box: [t.box.x, t.box.y, t.box.width, t.box.height],
-             category: /\d{3,}/.test(t.text) ? "phone" : "email",
-             transform: "mask",
-             source: "ocr"
-           });
+        const textStr = t.text.trim();
+        const isEmailPart = textStr.includes('@') || textStr.toLowerCase().endsWith('.com');
+        const isPhonePart = /\d{10}/.test(textStr) || (/\d{4,}/.test(textStr) && textStr.length > 8);
+        const isPasswordPart = /\*{3,}|•{3,}/.test(textStr);
+
+        if (config.maskPii && (isEmailPart || isPhonePart || isPasswordPart)) {
+          console.log(`OCR PII token detected (adding to redactions, not overlaid): "${textStr}"`);
+          mlRegions.push({
+            box: [t.box.x, t.box.y, t.box.width, t.box.height],
+            category: isPasswordPart ? "password" : (isPhonePart ? "phone" : "email"),
+            transform: isPasswordPart ? "blackout" : "mask",
+            source: "ocr"
+          });
         }
       }
-      
-      const debugImg = document.createElement("img");
-      debugImg.src = captureRes.dataUrl;
-      debugImg.style.width = "400px";
-      debugImg.style.border = "5px solid red";
-      document.body.appendChild(debugImg);
       
     } else {
       console.error("VEIL_CAPTURE failed:", captureRes);
     }
 
-    // Create a visual overlay so you can actually SEE the ML boxes on the screen!
+    status("Observing and sanitizing locally…", 30);
+    const context = observeAndSanitize(document, window.location.origin, config, mlRegions);
+    const payload = context.toPayload();
+    status(`Privacy gate passed; ${payload.redactions.length} region(s) masked`, 60, false, { gatePassed: true, fallback: payload.elements.length === 0 });
+
+    // Draw overlay using DOM-selector positions only — pixel-perfect over real inputs.
+    // Box-based (screenshot/OCR) regions are intentionally skipped: screenshot coordinates
+    // don't map cleanly to CSS layout, causing the floating false-positive boxes seen earlier.
     const existingOverlay = document.getElementById("veil-ml-overlay");
     if (existingOverlay) existingOverlay.remove();
 
-    if (mlRegions.length > 0) {
+    const selectorRedactions = payload.redactions.filter(r => r.selector && !r.box);
+
+    if (selectorRedactions.length > 0) {
       const overlay = document.createElement("div");
       overlay.id = "veil-ml-overlay";
       overlay.style.position = "absolute";
@@ -92,30 +96,36 @@ async function runVerticalSlice(): Promise<void> {
       overlay.style.height = "100%";
       overlay.style.pointerEvents = "none";
       overlay.style.zIndex = "999999";
-      
-      for (const region of mlRegions) {
-        if (region.box) {
+
+      for (const region of selectorRedactions) {
+        try {
+          const el = document.querySelector(region.selector!);
+          if (!el) continue;
+          const rect = el.getBoundingClientRect();
+          const left = rect.left + window.scrollX;
+          const top = rect.top + window.scrollY;
+
           const boxEl = document.createElement("div");
           boxEl.style.position = "absolute";
-          boxEl.style.left = `${region.box[0]}px`;
-          boxEl.style.top = `${region.box[1]}px`;
-          boxEl.style.width = `${region.box[2]}px`;
-          boxEl.style.height = `${region.box[3]}px`;
-          boxEl.style.backgroundColor = region.transform === "blur" ? "rgba(150, 150, 150, 0.9)" : "black";
+          boxEl.style.left = `${left}px`;
+          boxEl.style.top = `${top}px`;
+          boxEl.style.width = `${rect.width}px`;
+          boxEl.style.height = `${rect.height}px`;
+          boxEl.style.backgroundColor = region.transform === "blur" ? "rgba(150,150,150,0.9)" : "black";
           boxEl.style.border = "2px solid red";
           boxEl.style.color = "white";
-          boxEl.style.fontSize = "12px";
+          boxEl.style.fontSize = "11px";
           boxEl.style.fontWeight = "bold";
+          boxEl.style.display = "flex";
+          boxEl.style.alignItems = "center";
+          boxEl.style.paddingLeft = "6px";
+          boxEl.style.boxSizing = "border-box";
           boxEl.innerText = region.category.toUpperCase();
           overlay.appendChild(boxEl);
-        }
+        } catch (_) { /* skip invalid selectors */ }
       }
       document.body.appendChild(overlay);
     }
-
-    status("Observing and sanitizing locally…", 30);
-    const context = observeAndSanitize(document, window.location.origin, config, mlRegions);
-    status(`Privacy gate passed; ${context.toPayload().redactions.length} region(s) masked`, 60, false, { gatePassed: true, fallback: context.toPayload().elements.length === 0 });
     const response = await sendSanitizedContext(context);
     status(`Server Action Proposed: ${response.action.actionType}`, 80);
     const result = await executeAction(response.action, document, window);

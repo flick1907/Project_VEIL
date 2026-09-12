@@ -22,10 +22,8 @@ document.addEventListener("DOMContentLoaded", () => {
                     // Open dashboard in the background so we can see the logs
                     await api.tabs.create({ url: api.runtime.getURL("dist/frontend/index.html"), active: false });
                     
-                    // Give it a tiny delay to initialize listeners
-                    setTimeout(() => {
-                        api.tabs.sendMessage(tabs[0].id, { type: "VEIL_RUN" });
-                    }, 500);
+                    // Small pause (≈250 ms) to give the background service‑worker and listeners time to start
+                    setTimeout(() => api.tabs.sendMessage(tabs[0].id, { type: "VEIL_RUN" }), 250);
                 }
             } catch (e) {
                 console.error("Failed to run VEIL:", e);

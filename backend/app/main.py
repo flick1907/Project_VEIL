@@ -5,7 +5,7 @@ from pathlib import Path
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
-from google import genai
+import google.genai as genai
 from pydantic import ValidationError
 
 from .prompts import SYSTEM_PROMPT
@@ -71,7 +71,10 @@ def assist(context: SanitizedContext) -> ActionResponse:
                 response_schema=schema,
             ),
         )
-        action = TypedAction.model_validate_json(response.text)
+        raw_response = response.text
+        if not raw_response:
+            raise ValueError("Model returned an empty response")
+        action = TypedAction.model_validate_json(raw_response)
     except Exception as e:
         print(f"LLM Error: {e}")
         action = fallback_action

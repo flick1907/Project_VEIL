@@ -43,7 +43,18 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message && message.type === "VEIL_REQUIRE_CONFIRMATION") {
     // Store the sendResponse callback and action
     pendingConfirmations.set(message.actionId, { resolve: sendResponse, action: message.action });
-    
+
+    // Notify UI that authorization is pending
+    if (sender.tab?.id !== undefined) {
+      chrome.tabs.sendMessage(sender.tab.id, {
+        type: "VEIL_STATE_UPDATE",
+        payload: "Awaiting authorization",
+        progress: 0,
+        isWarning: true,
+        awaitingAuth: true
+      });
+    }
+
     // Automatically open the dashboard if we need confirmation
     chrome.tabs.create({ url: chrome.runtime.getURL("dist/frontend/index.html"), active: true });
     
