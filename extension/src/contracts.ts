@@ -1,4 +1,4 @@
-export type PiiCategory = "password" | "email" | "phone" | "configured";
+export type PiiCategory = "password" | "email" | "phone" | "configured" | "id";
 export type RedactionTransform = "blackout" | "mask" | "blur";
 
 export interface Region {

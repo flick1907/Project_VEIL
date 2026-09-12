@@ -15,7 +15,7 @@ function status(message: string, progress?: number, isWarning = false, extraStat
 
 import { detectFaces } from "./perception/face.js";
 import { detectText } from "./perception/ocr.js";
-import { Region } from "./contracts.js";
+import { Region, PiiCategory } from "./contracts.js";
 
 async function runVerticalSlice(): Promise<void> {
   try {
@@ -89,11 +89,11 @@ async function runVerticalSlice(): Promise<void> {
     if (selectorRedactions.length > 0) {
       const overlay = document.createElement("div");
       overlay.id = "veil-ml-overlay";
-      overlay.style.position = "absolute";
+      overlay.style.position = "fixed";    // fixed = relative to viewport, matching the screenshot
       overlay.style.top = "0";
       overlay.style.left = "0";
-      overlay.style.width = "100%";
-      overlay.style.height = "100%";
+      overlay.style.width = "100vw";
+      overlay.style.height = "100vh";
       overlay.style.pointerEvents = "none";
       overlay.style.zIndex = "999999";
 
